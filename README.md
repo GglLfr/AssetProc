@@ -9,6 +9,6 @@ This project is licensed under [GNU GPL v3](/LICENSE).
 
 ## Version Compatibility
 
-| `Mindustry` | `EntityAnno`  |
+| `Mindustry` | `AssetProc`   |
 |-------------|---------------|
 | `v160.*`    | `v1.0.0+v160` |
