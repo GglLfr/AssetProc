@@ -82,6 +82,7 @@ public class AssetProcPlugin implements Plugin<Project>{
             .named("main");
 
         tasks.register("processAssets", JavaExec.class, t -> {
+            t.getInputs().file(meta);
             t.getInputs().property("processors", procs);
             t.getInputs().property("main", mainClass);
 
@@ -98,6 +99,7 @@ public class AssetProcPlugin implements Plugin<Project>{
             t.getArgumentProviders().add(() -> {
                 List<String> args = new ArrayList<>();
                 args.add(mainClass.get());
+                args.add(meta.get().getAsFile().getAbsolutePath());
 
                 var in = assetsRaw.get().getAsFile().toPath();
                 var out = assets.get().getAsFile().toPath();
