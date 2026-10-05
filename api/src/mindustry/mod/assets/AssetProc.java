@@ -4,5 +4,5 @@ import arc.files.*;
 import arc.struct.*;
 
 public interface AssetProc{
-    void process(Fi inputDirectory, Fi outputDirectory, StringMap options);
+    void process(ObjectMap<String, Fi> inputs, ObjectMap<String, Fi> outputs, StringMap arguments);
 }

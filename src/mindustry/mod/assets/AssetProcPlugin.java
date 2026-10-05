@@ -1,7 +1,7 @@
 package mindustry.mod.assets;
 
 import arc.util.serialization.*;
-import mindustry.mod.assets.AssetProcExtension.*;
+import mindustry.mod.assets.task.*;
 import org.gradle.api.*;
 import org.gradle.api.attributes.*;
 import org.gradle.api.plugins.*;
@@ -57,12 +57,19 @@ public class AssetProcPlugin implements Plugin<Project>{
         assets.convention(root.dir("assets"));
         assetsRaw.convention(root.dir("assets-raw"));
         antialias.convention(false);
-        procs.convention(pregenerated.zip(antialias, (p, a) -> p
-            ? List.of(new Processor("sprites", "sprites", "mindustry.mod.assets.proc.SpriteProc", Map.of("antialias", a.toString())))
-            : Collections.emptyList())
-        );
-
-        var mainClass = providers.fileContents(meta).getAsText().map(in -> Jval.read(in).getString("main", null));
+        procs.convention(pregenerated.zip(antialias, (p, a) -> {
+            if(p){
+                var proc = objects.newInstance(Processor.class);
+                proc.getInputs().put("sprites", assetsRaw.dir("sprites"));
+                proc.getInputs().put("sprites-override", assetsRaw.dir("sprites-override"));
+                proc.getOutputs().put("sprites", assets.dir("sprites"));
+                proc.getOutputs().put("sprites-override", assets.dir("sprites-override"));
+                proc.getArguments().put("antialias", a.toString());
+                return List.of(proc);
+            }else{
+                return Collections.emptyList();
+            }
+        }));
 
         String pluginVersion;
         try(var in = AssetProcPlugin.class.getClassLoader().getResourceAsStream("asset-proc-version")){
@@ -73,6 +80,7 @@ public class AssetProcPlugin implements Plugin<Project>{
             throw new GradleException("Couldn't read plugin version", e);
         }
 
+        deps.add("implementation", "com.github.GglLfr.AssetProc:api:" + pluginVersion);
         deps.add(procDependencies.getName(), "com.github.GglLfr.AssetProc:impl:" + pluginVersion);
         deps.addProvider(procDependencies.getName(), pregenerated.filter(Boolean::booleanValue).map(p -> "Anuken:Mindustry:latest:assets"));
 
@@ -81,52 +89,11 @@ public class AssetProcPlugin implements Plugin<Project>{
             .getSourceSets()
             .named("main");
 
-        tasks.register("processAssets", JavaExec.class, t -> {
-            t.getInputs().file(meta);
-            t.getInputs().property("processors", procs);
-            t.getInputs().property("main", mainClass);
-
-            t.getInputs()
-                .files(procs.zip(assetsRaw, (list, dir) -> list.stream().map(p -> dir.dir(p.input())).toList()))
-                .withPropertyName("assetsRaw")
-                .withPathSensitivity(PathSensitivity.RELATIVE);
-            t.getOutputs()
-                .dirs(procs.zip(assets, (list, dir) -> list.stream().map(p -> dir.dir(p.output())).toList()))
-                .withPropertyName("assets");
-
-            t.getMainClass().set("mindustry.mod.assets.AssetProcs");
+        tasks.register("processAssets", ProcessAssetsTask.class, t -> {
+            t.setDescription("Processes raw assets (e.g. sprites).");
+            t.getMeta().set(meta);
+            t.getProcessors().set(procs);
             t.classpath(main.map(SourceSet::getCompileClasspath), main.map(SourceSet::getRuntimeClasspath), procClasspath);
-            t.getArgumentProviders().add(() -> {
-                List<String> args = new ArrayList<>();
-                args.add(mainClass.get());
-                args.add(meta.get().getAsFile().getAbsolutePath());
-
-                var in = assetsRaw.get().getAsFile().toPath();
-                var out = assets.get().getAsFile().toPath();
-
-                for(var p : procs.get()){
-                    args.add("-p");
-                    args.add(p.className());
-                    args.add(in.resolve(p.input()).toAbsolutePath().toString());
-                    args.add(out.resolve(p.output()).toAbsolutePath().toString());
-
-                    for(var e : p.options().entrySet()){
-                        if(e.getKey().startsWith("-"))
-                            throw new IllegalArgumentException("Option key cannot start with `-`");
-                        args.add(String.format("%s=%s", e.getKey(), e.getValue()));
-                    }
-                }
-
-                return args;
-            });
-
-            t.jvmArgs(
-                // Match the ones in native Mindustry client json file.
-                "-Dhttps.protocols=TLSv1.2,TLSv1.1,TLSv1",
-                "-XX:+ShowCodeDetailsInExceptionMessages",
-                "-XX:+UseCompactObjectHeaders",
-                "--enable-native-access=ALL-UNNAMED"
-            );
         });
     }
 }

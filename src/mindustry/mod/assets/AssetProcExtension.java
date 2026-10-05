@@ -1,10 +1,12 @@
 package mindustry.mod.assets;
 
+import mindustry.mod.assets.task.*;
+import org.gradle.api.*;
 import org.gradle.api.file.*;
+import org.gradle.api.model.*;
 import org.gradle.api.provider.*;
 
-import java.io.*;
-import java.util.*;
+import javax.inject.*;
 
 public interface AssetProcExtension{
     /** @return {@code mod.[h]json} meta file. */
@@ -25,17 +27,13 @@ public interface AssetProcExtension{
     /** @return {@linkplain Class#getName() Full class names} for processors. Defaults to just the sprite processor. */
     ListProperty<Processor> getProcessors();
 
-    /** Convenience method to add a processor. */
-    default void addProcessor(String directory, String className, Map<String, String> options){
-        addProcessor(directory, directory, className, options);
+    /** Adds and configures a new processor. */
+    default void processor(Action<? super Processor> configure){
+        var proc = getObjects().newInstance(Processor.class);
+        configure.execute(proc);
+        getProcessors().add(proc);
     }
 
-    /** Convenience method to add a processor. */
-    default void addProcessor(String input, String output, String className, Map<String, String> options){
-        getProcessors().add(new Processor(input, output, className, options));
-    }
-
-    record Processor(String input, String output, String className,
-                     Map<String, String> options) implements Serializable{
-    }
+    @Inject
+    ObjectFactory getObjects();
 }
