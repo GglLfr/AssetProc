@@ -60,6 +60,7 @@ public class AssetProcPlugin implements Plugin<Project>{
         procs.convention(pregenerated.zip(antialias, (p, a) -> {
             if(p){
                 var proc = objects.newInstance(Processor.class);
+                proc.getClassName().set("mindustry.mod.assets.proc.SpriteProc");
                 proc.getInputs().put("sprites", assetsRaw.dir("sprites"));
                 proc.getInputs().put("sprites-override", assetsRaw.dir("sprites-override"));
                 proc.getOutputs().put("sprites", assets.dir("sprites"));

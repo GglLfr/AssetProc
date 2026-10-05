@@ -18,8 +18,9 @@ public abstract class ProcessAssetsTask extends JavaExec{
 
     protected abstract @Inject FileSystemOperations getFileSystemOperations();
 
-    @Inject
-    public ProcessAssetsTask(ProviderFactory providers){
+    public ProcessAssetsTask(){
+        onlyIf(t -> !getProcessors().get().isEmpty());
+
         getMainClass().set("mindustry.mod.assets.AssetProcs");
         jvmArgs("--enable-native-access=ALL-UNNAMED");
         getArgumentProviders().add(() -> {
