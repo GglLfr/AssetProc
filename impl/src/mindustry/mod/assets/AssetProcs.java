@@ -1,7 +1,6 @@
 package mindustry.mod.assets;
 
 import arc.*;
-import arc.assets.*;
 import arc.files.*;
 import arc.func.*;
 import arc.mock.*;
@@ -24,8 +23,7 @@ import static mindustry.Vars.*;
 
 public class AssetProcs{
     private static final TaskQueue posts = new TaskQueue();
-    private static ProcAtlas atlas;
-    private static LoadedMod mod;
+    public static LoadedMod mod;
 
     public static void main(String[] args){
         ArcNativesLoader.load();
@@ -52,11 +50,17 @@ public class AssetProcs{
             }
         };
         settings = new Settings();
-        assets = new AssetManager(tree = new FileTree());
-        Core.atlas = atlas = new ProcAtlas();
+
+        // Shutdown the current thread executor.
+        executor.shutdown();
+        try{
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+        }catch(InterruptedException e){
+            throw new RuntimeException(e);
+        }
 
         CompletableFuture<Throwable> error = new CompletableFuture<>();
-        executor = new ThreadPoolExecutor(OS.cores, OS.cores, 0, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(), run -> {
+        executor = mainExecutor = new ThreadPoolExecutor(OS.cores, OS.cores, 0, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(), run -> {
             var thread = new Thread(run);
             thread.setDaemon(true);
             thread.setUncaughtExceptionHandler((t, e) -> error.complete(e));

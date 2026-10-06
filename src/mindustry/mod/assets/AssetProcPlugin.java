@@ -96,5 +96,13 @@ public class AssetProcPlugin implements Plugin<Project>{
             t.getProcessors().set(procs);
             t.classpath(main.map(SourceSet::getCompileClasspath), main.map(SourceSet::getRuntimeClasspath), procClasspath);
         });
+
+        tasks.named("clean", Delete.class).configure(t ->
+            t.delete(procs.map(list ->
+                list.stream()
+                    .map(p -> p.getOutputs().map(Map::values))
+                    .toList()
+            ))
+        );
     }
 }
